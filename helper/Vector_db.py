@@ -70,8 +70,17 @@ def add_documents_to_pinecone(documents: str):
             model="models/embedding-001",
             google_api_key=google_api_key
         )
+        
+        pinecone = Pinecone(api_key=pinecone_api_key)
+        index_name = "rag-customer-support"
+        
+        print("✅ Connect with Pinecone")
+
         try:
-            pinecone = Pinecone(api_key=pinecone_api_key)
+            # Check if Index Exists
+            index_list = pinecone.list_indexes()
+            print(f"🔹 Available indexes: {index_list}")
+            
         except PineconeProtocolError:
             print("⚠️ Pinecone connection timed out. Reinitializing...")
             pinecone = Pinecone(api_key=pinecone_api_key, environment="us-east-1")
@@ -83,13 +92,7 @@ def add_documents_to_pinecone(documents: str):
             )
             vector_store.add_documents(documents=documents)
             print("✅ Successfully added new documents after retrying.")
-            
-        index_name = "rag-customer-support"
-        print("Connect with Pinecone")
-        
-        # Check if Index Exists
-        index_list = pinecone.list_indexes()
-        print(f"🔹 Available indexes: {index_list}")
+            return
 
         if index_name not in index_list:
             print(f"❌ Index '{index_name}' does not exist. Create the index first.")
