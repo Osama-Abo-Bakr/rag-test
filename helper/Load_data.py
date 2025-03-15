@@ -67,6 +67,10 @@ def download_audio(url, output_folder="audio"):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)  # Ensure the folder exists
 
+
+    pot_token = "MluVI_1wtGlIwpUbG7aAFC0fwbb4mEodEQmIMSDaweHRcZeOOviP4xA_wbkN707Vj-9knt9zB4I0l_BdS6vSTYwxFlQ89Q1i2MgeSkgXiSLLYdKyt2J-hiHVj-IP"
+    url_with_pot = f"{url}&pot={pot_token}"
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'outtmpl': f"{output_folder}/%(title)s.%(ext)s",  # Proper filename format
@@ -80,7 +84,7 @@ def download_audio(url, output_folder="audio"):
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url, download=True)
+        info_dict = ydl.extract_info(url_with_pot, download=True)
         filename = ydl.prepare_filename(info_dict)
         filename = filename.replace(".webm", ".mp3").replace(".m4a", ".mp3")  # Ensure correct file format
 
