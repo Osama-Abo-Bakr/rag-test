@@ -1,76 +1,69 @@
 import os
 from dotenv import load_dotenv
-from pinecone import Pinecone, ServerlessSpec
-from langchain_pinecone import PineconeVectorStore
+from langchain_community.vectorstores import FAISS
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 load_dotenv(".env")
-def create_index(index_name: str, vect_length: int=1536):
-    """
-    Create an index in Pinecone for storing vectors.
 
-    This function deletes all existing indexes and creates a new index
-    if it does not already exist. The index is created with the specified
-    name and vector length, using the 'cosine' similarity metric.
-
-    Args:
-        index_name (str): The name of the index to create.
-        vect_length (int, optional): The dimensionality of the vectors. Defaults to 1536 (1536 for OpenAI embeddings).
-                                                                                         (768 for Gemini embeddings).
-    
-    # Run this function to create a new index in Pinecone  
-    # create_index(index_name="rag-customer-support", vect_length=768)
+# Function Load Vector-DB
+def load_vector_db():
     """
-    pinecone = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
+    Load Vector-DB from local file.
+
+    The Vector-DB is a local file that stores the embedded data.
+    If the file exists, it will be loaded and returned as a FAISS vectorstore.
+    If not, it will return None.
+
+    Returns:
+        FAISS: A FAISS vectorstore containing the embedded data.
+    """
+    embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
+                                                    google_api_key="AIzaSyCHQdYdiHjAf910XztOLYFxvDJW58OrKMA")
+    save_path = f'vector_db'
     try:
-        print('Deleting all indexes')
-        _ = [pinecone.delete_index(name=index_name['name']) for index_name in pinecone.list_indexes()]
-    except Exception as e:
-        print('Error In Deleting Indexes: {}'.format(e))
+        if os.path.exists(save_path):
+                vectorstore = FAISS.load_local(save_path, embeddings=embedding_model,
+                                            allow_dangerous_deserialization=True)
+                return vectorstore
+        else: print("❌ Vector-DB not found.")
+    except:
+        print("❌ An error occurred while loading Vector-DB.")
         
-    if index_name not in pinecone.list_indexes():
-        print('Creating Index: {}'.format(index_name))
-        pinecone.create_index(
-            name=index_name,
-            dimension=vect_length,
-            metric='cosine',
-            spec=ServerlessSpec(cloud='aws', region='us-east-1')
-        )
-        print('Done Creating Index: {}'.format(index_name))
-        
-
-def add_documents_to_pinecone(documents: str):
+# Function to update vector store
+def update_vector_store(documents: str):
     """
-    Adds documents to a Pinecone vector store.
+    Update the FAISS vector store with new documents.
 
-    This function processes and adds the provided documents to a specified
-    Pinecone index using a Google Generative AI embedding model. If the index
-    does not exist or the documents are invalid, appropriate error messages
-    are displayed.
+    This function updates an existing FAISS vectorstore by adding new documents
+    with their embeddings. If the vectorstore file does not exist, it creates a new
+    one using the provided documents.
 
     Args:
-        documents (str): The documents to be added to the Pinecone vector store.
+        documents (str): The documents to be embedded and added to the vector store.
 
     Raises:
-        Exception: Displays an error message if any exception occurs during
-                   the process.
+        Exception: If an error occurs while loading or updating the vector store, 
+                   an error message is printed.
     """
-    try:
-        if not documents:
-            print("⚠️ No valid documents found for processing.")
-            return
+    embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
+                                                    google_api_key="AIzaSyCHQdYdiHjAf910XztOLYFxvDJW58OrKMA")
+    save_path = f'vector_db'
+    
+    try:  
+        if os.path.exists(save_path):
+            vectorstore = FAISS.load_local(save_path, embeddings=embedding_model,
+                                        allow_dangerous_deserialization=True)
+            
+            # Add new products
+            if documents:
+                vectorstore.add_documents(documents, embedding=embedding_model)
         
-        embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
-                                                       google_api_key=os.getenv('GOOGLE_API_KEY'))
-        pinecone = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index_name='rag-customer-support'
-        
-        if index_name not in [index_info["name"] for index_info in pinecone.list_indexes()]:
-            print(f"❌ Index '{index_name}' does not exist. Create the index first.")
-            return
+        else:
+            os.makedirs(save_path, exist_ok=True)
+            vectorstore = FAISS.from_documents(documents=documents, embedding=embedding_model)
 
-        vector_store = PineconeVectorStore(index_name=index_name, embedding=embedding_model)
-        vector_store.add_documents(documents=documents)
-        print("✅ Successfully added new documents to Pinecone.")
+        # Save updated vector store
+        vectorstore.save_local(save_path)
+        print("Vector store has been updated with new documents.")
     except:
-        print("❌ An error occurred while adding new documents to Pinecone.")
+        print("❌ An error occurred while adding / Create Vector-DB.")

@@ -101,7 +101,7 @@ def loading_youtube_transcript(url):
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
-        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        client = Groq(api_key="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")
         
         with open(audio_path, "rb") as file:
             transcription = client.audio.transcriptions.create(

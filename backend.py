@@ -3,7 +3,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, Form, HTTPException
 from helper.Load_data import load_data
-from helper.Vector_db import add_documents_to_pinecone
+from helper.Vector_db import update_vector_store
 from helper.Full_chain import get_response
 
 _ = load_dotenv(override=True)
@@ -43,7 +43,7 @@ async def Add_Data_Pinecone(files_data: Optional[UploadFile]=None,
                 temp_file.write(await files_data.read())
             
             data = load_data(file_paths=[temp_file_path])
-            add_documents_to_pinecone(data)
+            update_vector_store(data)
             _ = os.remove(temp_file_path)
             return {"message": "✅ Files uploaded and processed successfully. 📁"}
         
@@ -55,7 +55,7 @@ async def Add_Data_Pinecone(files_data: Optional[UploadFile]=None,
                 raise HTTPException(status_code=400, detail="File should not be provided for URL case")
             
             data = load_data(url=url)
-            add_documents_to_pinecone(data)
+            update_vector_store(data)
             return {"message": "✅ URL processed successfully. 🔗"}
         
         else:

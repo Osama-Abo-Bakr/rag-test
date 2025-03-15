@@ -1,13 +1,13 @@
 import os
-from langchain_pinecone import PineconeVectorStore
+from helper.MySQL_DB import save_chat_history, get_chat_history
+from helper.Vector_db import load_vector_db
 from langchain.chains import ConversationalRetrievalChain
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import (ChatGoogleGenerativeAI, 
-                                    GoogleGenerativeAIEmbeddings)
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 
 
-def create_retriever_chain():    
+def create_retriever_chain():
     """
     Create a conversational retrieval chain with a Google Generative AI model.
 
@@ -20,13 +20,11 @@ def create_retriever_chain():
     Returns:
         ConversationalRetrievalChain
     """
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = "AIzaSyCHQdYdiHjAf910XztOLYFxvDJW58OrKMA"
     if not api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set.")
     
-    
-    embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
-    vectorstore = PineconeVectorStore(embedding=embedding_model, index_name='rag-customer-support')
+    vectorstore = load_vector_db()
     
     retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 10}, alpha=0.5)
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-thinking-exp-01-21",
@@ -76,7 +74,7 @@ def create_retriever_chain():
     )
     
 
-def get_response(user_query, user_id=None):
+def get_response(user_query, user_id):
     """
     Get a response from the conversational retrieval chain based on the user's query.
 
@@ -89,16 +87,22 @@ def get_response(user_query, user_id=None):
 
     Returns:
         dict: A dictionary containing the response and other metadata.
-    """    
+    """
+    chat_history = get_chat_history(user_id=user_id) # Get chat history
+    
     retriever_chain = create_retriever_chain() # Get response
-    result = retriever_chain.invoke({"question": user_query, "chat_history": []})
-    
-    if len(result["source_documents"]) > 0:
-        if result["source_documents"][0].metadata: 
-            url = result["source_documents"][0].metadata["url"]
-        else: url = None
-    else:
-        url = None
-    
-    result = {"answer": result['answer'], "video-url": url}
+    result = retriever_chain.invoke({"question": user_query, "chat_history": chat_history})
+    try:
+        if len(result["source_documents"]) > 0:
+            if result["source_documents"][0].metadata: 
+                url = result["source_documents"][0].metadata["url"]
+            else: url = None
+        else:
+            url = None
+        
+        result = {"answer": result['answer'], "video-url": url}
+    except:
+        result = {"answer": result['answer'], "video-url": None}
+        
+    save_chat_history(user_query=user_query, chatbot_answer=result['answer'], user_id=user_id) # Save chat history
     return result

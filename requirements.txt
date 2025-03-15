@@ -7,18 +7,12 @@ langchain-experimental
 langchain-google-genai
 
 # Pinecone VectorDB
-langchain-pinecone
-pinecone-notebooks
+faiss-cpu
 
 # Data Loader & Transcript
 pypdf
 docx2txt
 youtube-transcript-api
-yt_dlp
-groq
-# whisper
-# openai-whisper
-
 
 # FastAPI Backend
 fastapi[standard]
