@@ -87,10 +87,9 @@ def get_response(user_query, user_id):
     Returns:
         dict: A dictionary containing the response and other metadata.
     """
-    chat_history = get_chat_history(user_id=user_id) # Get chat history
     
     retriever_chain = create_retriever_chain() # Get response
-    result = retriever_chain.invoke({"question": user_query, "chat_history": chat_history})
+    result = retriever_chain.invoke({"question": user_query, "chat_history": []})
     try:
         if len(result["source_documents"]) > 0:
             if result["source_documents"][0].metadata: 
@@ -103,5 +102,4 @@ def get_response(user_query, user_id):
     except:
         result = {"answer": result['answer'], "video-url": None}
         
-    save_chat_history(user_query=user_query, chatbot_answer=result['answer'], user_id=user_id) # Save chat history
     return result
