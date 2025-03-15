@@ -13,6 +13,8 @@ faiss-cpu
 pypdf
 docx2txt
 youtube-transcript-api
+yt_dlp
+groq
 
 # FastAPI Backend
 fastapi[standard]
