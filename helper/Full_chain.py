@@ -1,5 +1,4 @@
 import os
-from helper.MySQL_DB import save_chat_history, get_chat_history
 from helper.Vector_db import load_vector_db
 from langchain.chains import ConversationalRetrievalChain
 from langchain_core.prompts import PromptTemplate
