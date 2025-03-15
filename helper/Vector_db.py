@@ -4,7 +4,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-load_dotenv(".env")
+_ = load_dotenv(override=True)
 def create_index(index_name: str, vect_length: int=1536):
     """
     Create an index in Pinecone for storing vectors.
@@ -60,6 +60,7 @@ def add_documents_to_pinecone(documents: str):
             print("⚠️ No valid documents found for processing.")
             return
         
+        print(os.getenv('GOOGLE_API_KEY'))
         embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
                                                        google_api_key=os.getenv('GOOGLE_API_KEY'))
         pinecone = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
@@ -68,9 +69,12 @@ def add_documents_to_pinecone(documents: str):
         if index_name not in [index_info["name"] for index_info in pinecone.list_indexes()]:
             print(f"❌ Index '{index_name}' does not exist. Create the index first.")
             return
-
+        
+        print("Adding new documents to Pinecone...")
+        print(os.getenv('PINECONE_API_KEY'))
         vector_store = PineconeVectorStore(index_name=index_name, embedding=embedding_model,
                                            pinecone_api_key=os.getenv('PINECONE_API_KEY'))
+        print("Done Adding new documents to Pinecone...")
         vector_store.add_documents(documents=documents)
         print("✅ Successfully added new documents to Pinecone.")
     except:
