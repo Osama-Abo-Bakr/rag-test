@@ -6,9 +6,6 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 _ = load_dotenv(override=True)
 
-print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY"))  # Debugging output
-print("PINECONE_API_KEY:", os.getenv("PINECONE_API_KEY"))
-
 def create_index(index_name: str, vect_length: int=1536):
     """
     Create an index in Pinecone for storing vectors.
