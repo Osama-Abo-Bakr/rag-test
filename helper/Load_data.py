@@ -80,7 +80,8 @@ def download_audio(url, output_folder="audio"):
             'preferredquality': '192',
         }],
         'ffmpeg_location': FFMPEG_PATH,
-        'quiet': True
+        'quiet': True,
+        'cookies': "cookies.txt"
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
