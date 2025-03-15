@@ -5,6 +5,10 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 _ = load_dotenv(override=True)
+
+print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY"))  # Debugging output
+print("PINECONE_API_KEY:", os.getenv("PINECONE_API_KEY"))
+
 def create_index(index_name: str, vect_length: int=1536):
     """
     Create an index in Pinecone for storing vectors.
@@ -65,6 +69,10 @@ def add_documents_to_pinecone(documents: str):
                                                        google_api_key=os.getenv('GOOGLE_API_KEY'))
         pinecone = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
         index_name='rag-customer-support'
+
+        # test
+        index_list = pinecone.list_indexes()
+        print(f"Available indexes: {index_list}")
         
         if index_name not in [index_info["name"] for index_info in pinecone.list_indexes()]:
             print(f"❌ Index '{index_name}' does not exist. Create the index first.")
@@ -77,5 +85,7 @@ def add_documents_to_pinecone(documents: str):
         print("Done Adding new documents to Pinecone...")
         vector_store.add_documents(documents=documents)
         print("✅ Successfully added new documents to Pinecone.")
-    except:
-        print("❌ An error occurred while adding new documents to Pinecone.")
+    
+    except Exception as e:
+        print(f"❌ An error occurred while adding new documents to Pinecone: {e}")
+
