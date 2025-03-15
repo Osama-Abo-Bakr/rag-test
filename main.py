@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 from helper.Load_data import load_data
-from helper.Vector_db import update_vector_store
+from helper.Vector_db import add_documents_to_pinecone
 
 def main():
     st.set_page_config(page_title="RAG Customer Support", page_icon=":robot_face:", layout="wide")
@@ -20,15 +20,16 @@ def main():
         
         with st.spinner("Processing files...", show_time=True):
             data = load_data(file_paths=file_paths)
-            update_vector_store(data)
+            add_documents_to_pinecone(data)
             _ = [os.remove(file_path) for file_path in file_paths]
         st.success("✅ Files uploaded and processed successfully. 📁")
     
     elif url:
-        with st.spinner("Processing Video URL...", show_time=True):
-            data = load_data(url=url)
-            update_vector_store(data)
-        st.write("✅ URL processed successfully. 🔗")
+        st.warning("❌ YouTube URLs are not supported yet. Please upload files instead.")
+        # with st.spinner("Processing Video URL...", show_time=True):
+        #     data = load_data(url=url)
+        #     add_documents_to_pinecone(data)
+        # st.write("✅ URL processed successfully. 🔗")
         
     else:
         st.write("Please upload files or provide a YouTube URL.")

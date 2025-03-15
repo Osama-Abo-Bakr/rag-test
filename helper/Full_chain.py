@@ -1,12 +1,15 @@
 import os
-from helper.Vector_db import load_vector_db
+from dotenv import load_dotenv
+from langchain_pinecone import PineconeVectorStore
 from langchain.chains import ConversationalRetrievalChain
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import (ChatGoogleGenerativeAI, 
+                                    GoogleGenerativeAIEmbeddings)
 
 
+_ = load_dotenv(override=True)
 
-def create_retriever_chain():
+def create_retriever_chain():    
     """
     Create a conversational retrieval chain with a Google Generative AI model.
 
@@ -19,11 +22,14 @@ def create_retriever_chain():
     Returns:
         ConversationalRetrievalChain
     """
-    api_key = "AIzaSyCHQdYdiHjAf910XztOLYFxvDJW58OrKMA"
+    api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         raise ValueError("GOOGLE_API_KEY environment variable is not set.")
     
-    vectorstore = load_vector_db()
+    
+    embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=api_key)
+    vectorstore = PineconeVectorStore(embedding=embedding_model, index_name='rag-customer-support',
+                                      pinecone_api_key=os.getenv('PINECONE_API_KEY'))
     
     retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 5, "fetch_k": 10}, alpha=0.5)
     llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash-thinking-exp-01-21",
@@ -73,7 +79,7 @@ def create_retriever_chain():
     )
     
 
-def get_response(user_query, user_id):
+def get_response(user_query, user_id=None):
     """
     Get a response from the conversational retrieval chain based on the user's query.
 
@@ -90,16 +96,14 @@ def get_response(user_query, user_id):
     
     retriever_chain = create_retriever_chain() # Get response
     result = retriever_chain.invoke({"question": user_query, "chat_history": []})
-    try:
+    try:    
         if len(result["source_documents"]) > 0:
             if result["source_documents"][0].metadata: 
                 url = result["source_documents"][0].metadata["url"]
             else: url = None
         else:
             url = None
-        
-        result = {"answer": result['answer'], "video-url": url}
     except:
-        result = {"answer": result['answer'], "video-url": None}
-        
+        url = None
+    result = {"answer": result['answer'], "video-url": url}
     return result

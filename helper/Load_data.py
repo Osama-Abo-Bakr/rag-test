@@ -1,38 +1,22 @@
-import os
-import yt_dlp
-from groq import Groq
+import re
 from typing import List
+from youtube_transcript_api import YouTubeTranscriptApi
 from langchain_community.document_loaders import (TextLoader, PyPDFLoader, Docx2txtLoader)
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.schema import Document
-
-# Get the FFmpeg path dynamically
-FFMPEG_PATH = "./ffmpeg/bin/ffmpeg.exe"
-# FFMPEG_PATH = r"D:\Pycharm\RAG-Project\RAG (Customer Services)\V3\ffmpeg\bin\ffmpeg.exe"
-os.environ["PATH"] += os.pathsep + os.path.dirname(FFMPEG_PATH)
-
-# import shutil
-
-# # Automatically find FFmpeg in the system
-# FFMPEG_PATH = shutil.which("ffmpeg")
-
-# if not FFMPEG_PATH:
-#     raise EnvironmentError("FFmpeg is not installed or not found in PATH. Install it in Docker.")
-
-# os.environ["PATH"] += os.pathsep + os.path.dirname(FFMPEG_PATH)
 
 
 def loading_documents(file_paths: List[str]):
     """
     Load text from documents in the given file paths.
 
-    Supported file formats: .txt, .pdf, .docx.
+    Supported file formats are .txt, .pdf, .docx.
 
     :param file_paths: A list of paths to the files to load
-    :return: A list containing a single Document object with all text concatenated
+    :return: A single string containing all the text from the files, with each file's text
+             separated by a line containing "----"
     """
     full_text = ""
-    
     for path in file_paths:
         try:
             if path.endswith(".txt"):
@@ -55,82 +39,49 @@ def loading_documents(file_paths: List[str]):
     
     return [Document(page_content=full_text)]
 
-
-def download_audio(url, output_folder="audio"):
-    """
-    Downloads the audio from a YouTube video using yt-dlp.
-
-    :param url: The URL of the YouTube video
-    :param output_folder: Folder to save the downloaded audio
-    :return: Path to the downloaded audio file
-    """
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)  # Ensure the folder exists
-
-
-    pot_token = "MluVI_1wtGlIwpUbG7aAFC0fwbb4mEodEQmIMSDaweHRcZeOOviP4xA_wbkN707Vj-9knt9zB4I0l_BdS6vSTYwxFlQ89Q1i2MgeSkgXiSLLYdKyt2J-hiHVj-IP"
-    url_with_pot = f"{url}&pot={pot_token}"
-
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': f"{output_folder}/%(title)s.%(ext)s",  # Proper filename format
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'ffmpeg_location': FFMPEG_PATH,
-        'quiet': True,
-        'cookies': "cookies.txt"
-    }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info_dict = ydl.extract_info(url_with_pot, download=True)
-        filename = ydl.prepare_filename(info_dict)
-        filename = filename.replace(".webm", ".mp3").replace(".m4a", ".mp3")  # Ensure correct file format
-
-    return filename  # Return full filename
-
+def extract_video_id(url):
+    if len(url) == 11 and re.match(r'^[A-Za-z0-9_-]{11}$', url):
+        return url
+    
+    # Try to extract from various URL formats
+    patterns = [
+        r'youtube\.com/watch\?v=([A-Za-z0-9_-]{11})',
+        r'youtu\.be/([A-Za-z0-9_-]{11})',
+        r'youtube\.com/embed/([A-Za-z0-9_-]{11})',
+        r'youtube\.com/v/([A-Za-z0-9_-]{11})'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    
+    return None
 
 def loading_youtube_transcript(url):
     """
-    Downloads and transcribes a YouTube video.
+    Downloads the transcript of a YouTube video given its URL.
 
-    :param url: The YouTube video URL
-    :return: Transcribed text as a Document object
+    :param url: The URL of the YouTube video
+    :return: The transcript of the video as a string
+    :raises ValueError: if the transcript could not be retrieved
     """
     try:
-        audio_path = download_audio(url)
-        print(f"Downloaded audio path: {audio_path}")
-
-        if not os.path.exists(audio_path):
-            raise FileNotFoundError(f"Audio file not found: {audio_path}")
-
-        client = Groq(api_key="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")
+        # Extract video ID from the URL
+        video_id = extract_video_id(url)
+        if not video_id:
+            raise print("Invalid YouTube URL or video ID")
         
-        with open(audio_path, "rb") as file:
-            transcription = client.audio.transcriptions.create(
-                file=(audio_path, file.read()),
-                model="whisper-large-v3-turbo",
-                prompt="Specify context or spelling",
-                response_format="json",
-                language="en",
-                temperature=0.0
-            )
-
-        transcript_text = transcription.text
-
-        # Remove the downloaded audio file
-        os.remove(audio_path)
-        print(f"Deleted audio file: {audio_path}")
-
-        return [Document(page_content=f"video-URL: {url} \n{transcript_text}", metadata={"url": url})]
-
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['ar', 'en'])
+        transcript_text = f"video-URL: {url} \n" + ' '.join([item['text'] for item in transcript_list])
+        
+        return [Document(page_content=transcript_text, metadata={"url": url})]
+    
     except Exception as e:
-        raise ValueError(f"Error processing video: {str(e)}")
+        raise ValueError(f"Could not retrieve transcript: {str(e)}")
+    
 
-
-def load_data(file_paths: List[str] = None, url: str = None):
+def load_data(file_paths: List[str]=None, url: str=None):
     """
     Load data from either a list of file paths or a YouTube URL.
 
@@ -139,26 +90,19 @@ def load_data(file_paths: List[str] = None, url: str = None):
         url (str): A YouTube URL to load transcript from.
 
     Returns:
-        List[Document]: A list of Document objects, each containing text chunks.
+        List[str]: A list of strings, where each string is a chunk of text from
+            the loaded data. The chunks are determined by the
+            RecursiveCharacterTextSplitter.
     """
     if url and url.strip():
         data = loading_youtube_transcript(url)
     elif file_paths or file_paths == []:
         data = loading_documents(file_paths)
-    else:
+    else: 
         raise ValueError("Either file_paths or url must be provided.")
-
-    splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+        
+    splitter = RecursiveCharacterTextSplitter(chunk_size=2000, 
+                                              chunk_overlap=200)
+    
     final_data = splitter.split_documents(documents=data)
-
     return final_data
-
-
-
-# # url = "https://www.youtube.com/watch?v=dzoL2n8HweE"
-# url="https://www.youtube.com/watch?v=dzoL2n8HweE&t=3s&ab_channel=%D7%A7%D7%99%D7%A0%D7%93%D7%A7%D7%A1%D7%9B%D7%9C%D7%99%D7%A0%D7%99%D7%94%D7%95%D7%9C%D7%9E%D7%AA%D7%A7%D7%93%D7%9E%D7%99%D7%9D%D7%9C%D7%91%D7%AA%D7%99%D7%A1%D7%A4%D7%A8"
-# try:
-#     results = load_data(url=url)
-#     print(results)
-# except Exception as err:
-#     print(f"Error: {err}")

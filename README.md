@@ -1,11 +1,11 @@
 # Kindix Customer Support Chatbot
 
 ## Overview
-The **Kindix Customer Support Chatbot** is an AI-powered chatbot designed to provide efficient customer service and support. The chatbot is built using **FastAPI**, **FAISS Vector Database**, and **Google Generative AI**, leveraging **RAG (Retrieval-Augmented Generation)** to process and retrieve information from documents and video transcripts.
+The **Kindix Customer Support Chatbot** is an AI-powered chatbot designed to provide efficient customer service and support. The chatbot is built using **FastAPI**, **Pinecone Vector Database**, and **Google Generative AI**, leveraging **RAG (Retrieval-Augmented Generation)** to process and retrieve information from documents and video transcripts.
 
 ## Features
 - Extracts text from **documents (PDF, DOCX, TXT)** and **YouTube videos**.
-- Stores processed data in **FAISS Vector Database** for efficient retrieval.
+- Stores processed data in **Pinecone Vector Database** for efficient retrieval.
 - Utilizes **Google Generative AI** for intelligent conversational responses.
 - Provides a **FastAPI-based REST API** for adding data and interacting with the chatbot.
 - Supports **multilingual customer interactions**, including **English and Arabic**.
@@ -41,11 +41,11 @@ cp .env.example .env
 ```
 Ensure the following keys are set:
 - `GOOGLE_API_KEY` (for Google Generative AI)
+- `PINECONE_API_KEY` (for Pinecone Vector Database)
 - `DB_HOST` 
 - `DB_USER`
 - `DB_PASSWORD`
 - `DB_NAME`
-- `DB_PORT`
 
 ### 5. Create MySQL-DB.
 * Create Database --> rag-customer-support
@@ -126,12 +126,12 @@ print(response.json())
 ![RAG-Customer-support](./img/RAG%20-%20customer%20support.jpg)
 ### 1. **Backend**
 - **FastAPI**: Lightweight and fast backend framework.
-- **FAISS**: Used for storing and retrieving vector embeddings of processed documents.
+- **Pinecone**: Used for storing and retrieving vector embeddings of processed documents.
 - **Google Generative AI**: Provides intelligent responses.
 
 ### 2. **Data Processing**
 - `Load_data.py`: Handles document and YouTube transcript extraction.
-- `Vector_db.py`: Manages FAISS database operations.
+- `Vector_db.py`: Manages Pinecone database operations.
 - `Full_chain.py`: Implements the chatbot’s conversational retrieval mechanism.
 - `MySQL_DB.py`: Implements the connection for MySQL Database.
 
@@ -144,8 +144,7 @@ print(response.json())
 # Build and run Docker container
 # Before you run this in local need to host DB and change host.
 docker build -t kindix-chatbot .
-docker run -p 8000:8000 --env-file .env kindix-chatbot
-# docker run -p 8000:8000 kindix-chatbot
+docker run --env-file .env -p 8000:8000 kindix-chatbot
 ```
 
 ---
