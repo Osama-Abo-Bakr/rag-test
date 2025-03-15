@@ -46,46 +46,56 @@ def create_index(index_name: str, vect_length: int=1536):
 def add_documents_to_pinecone(documents: str):
     """
     Adds documents to a Pinecone vector store.
-
-    This function processes and adds the provided documents to a specified
-    Pinecone index using a Google Generative AI embedding model. If the index
-    does not exist or the documents are invalid, appropriate error messages
-    are displayed.
-
-    Args:
-        documents (str): The documents to be added to the Pinecone vector store.
-
-    Raises:
-        Exception: Displays an error message if any exception occurs during
-                   the process.
     """
     try:
         if not documents:
             print("⚠️ No valid documents found for processing.")
             return
-        
-        print(os.getenv('GOOGLE_API_KEY'))
-        embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001",
-                                                       google_api_key=os.getenv('GOOGLE_API_KEY'))
-        pinecone = Pinecone(api_key=os.getenv('PINECONE_API_KEY'))
-        index_name='rag-customer-support'
 
-        # test
+        # Debugging API Keys
+        google_api_key = os.getenv("GOOGLE_API_KEY")
+        pinecone_api_key = os.getenv("PINECONE_API_KEY")
+
+        if not google_api_key:
+            print("❌ Missing GOOGLE_API_KEY. Please check your .env file.")
+            return
+        if not pinecone_api_key:
+            print("❌ Missing PINECONE_API_KEY. Please check your .env file.")
+            return
+
+        # Debugging output
+        print(f"🔹 Using GOOGLE_API_KEY: {google_api_key[:5]}... (hidden for security)")
+        print(f"🔹 Using PINECONE_API_KEY: {pinecone_api_key[:5]}... (hidden for security)")
+
+        # Initialize Embeddings and Pinecone
+        embedding_model = GoogleGenerativeAIEmbeddings(
+            model="models/embedding-001",
+            google_api_key=google_api_key
+        )
+        pinecone = Pinecone(api_key=pinecone_api_key, environment="us-east-1")
+
+        index_name = "rag-customer-support"
+
+        # Check if Index Exists
         index_list = pinecone.list_indexes()
-        print(f"Available indexes: {index_list}")
-        
-        if index_name not in [index_info["name"] for index_info in pinecone.list_indexes()]:
+        print(f"🔹 Available indexes: {index_list}")
+
+        if index_name not in index_list:
             print(f"❌ Index '{index_name}' does not exist. Create the index first.")
             return
-        
-        print("Adding new documents to Pinecone...")
-        print(os.getenv('PINECONE_API_KEY'))
-        vector_store = PineconeVectorStore(index_name=index_name, embedding=embedding_model,
-                                           pinecone_api_key=os.getenv('PINECONE_API_KEY'))
-        print("Done Adding new documents to Pinecone...")
+
+        # Initialize Vector Store
+        vector_store = PineconeVectorStore(
+            index_name=index_name,
+            embedding=embedding_model,
+            pinecone_api_key=pinecone_api_key,
+            host="https://rag-customer-support-84lnu3k.svc.aped-4627-b74a.pinecone.io"
+        )
+
+        print("🚀 Adding new documents to Pinecone...")
         vector_store.add_documents(documents=documents)
         print("✅ Successfully added new documents to Pinecone.")
-    
+
     except Exception as e:
-        print(f"❌ An error occurred while adding new documents to Pinecone: {e}")
+        print(f"❌ Error while adding documents to Pinecone: {e}")
 
