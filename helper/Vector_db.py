@@ -76,31 +76,31 @@ def add_documents_to_pinecone(documents: str):
         
         print("✅ Connect with Pinecone")
 
-
-        index_list = pinecone.list_indexes()
-        print(f"🔹 Available indexes: {index_list}")
+        # index_list = pinecone.list_indexes()
+        # print(f"🔹 Available indexes: {index_list}")
             
-        if index_name not in index_list:
-            print(f"❌ Index '{index_name}' does not exist. Create the index first.")
-            return
+        # if index_name not in index_list:
+        #     print(f"❌ Index '{index_name}' does not exist. Create the index first.")
+        #     return
 
         # Initialize Vector Store
         try:
             print("🔥 Initialize vector-store \n")
+            index = pinecone.Index(index_name)
             vector_store = PineconeVectorStore(
-                index_name=index_name,
+                index_name=index,
                 embedding=embedding_model,
                 pinecone_api_key=pinecone_api_key,
-                host="https://rag-customer-support-84lnu3k.svc.aped-4627-b74a.pinecone.io"
             )
+            print("Done Loading Vecotr-store")
+            
         except PineconeProtocolError:
             print("⚠️ Pinecone connection timed out. Reinitializing...")
-            pinecone = Pinecone(api_key=pinecone_api_key, environment="us-east-1")
+            pinecone = Pinecone(api_key=pinecone_api_key)
             vector_store = PineconeVectorStore(
                 index_name=index_name,
                 embedding=embedding_model,
                 pinecone_api_key=pinecone_api_key,
-                host="https://rag-customer-support-84lnu3k.svc.aped-4627-b74a.pinecone.io"
             )
             vector_store.add_documents(documents=documents)
             print("✅ Successfully added new documents after retrying.")
